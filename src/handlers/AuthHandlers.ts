@@ -50,11 +50,14 @@ export class AuthHandlers extends BaseHandler {
     try {
       const loginResult = await this.adtclient.login();
       this.trackRequest(startTime, true);
+      // abap-adt-api's login() resolves to undefined on success (it only
+      // rejects on failure). JSON.stringify(undefined) is undefined, which
+      // breaks the MCP text-content schema, so normalize to a status object.
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(loginResult)
+            text: JSON.stringify(loginResult ?? { status: 'Logged in successfully' })
           }
         ]
       };
