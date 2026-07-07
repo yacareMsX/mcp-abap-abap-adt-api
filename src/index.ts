@@ -39,6 +39,11 @@ import { RevisionHandlers } from './handlers/RevisionHandlers.js';
 
 config({ path: path.resolve(__dirname, '../.env') });
 
+// Allow self-signed SAP certificates when TLS_REJECT_UNAUTHORIZED=0
+if (process.env.TLS_REJECT_UNAUTHORIZED === '0') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 export class AbapAdtServer extends Server {
   private adtClient: ADTClient;
   private authHandlers: AuthHandlers;
@@ -80,14 +85,16 @@ export class AbapAdtServer extends Server {
       }
     );
 
-    const missingVars = ['SAP_URL', 'SAP_USER', 'SAP_PASSWORD'].filter(v => !process.env[v]);
+    const sapUser = process.env.SAP_USER || process.env.SAP_USERNAME;
+    const missingVars = ['SAP_URL', 'SAP_PASSWORD'].filter(v => !process.env[v]);
+    if (!sapUser) missingVars.push('SAP_USER');
     if (missingVars.length > 0) {
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
-    
+
     this.adtClient = new ADTClient(
       process.env.SAP_URL as string,
-      process.env.SAP_USER as string,
+      sapUser as string,
       process.env.SAP_PASSWORD as string,
       process.env.SAP_CLIENT as string,
       process.env.SAP_LANGUAGE as string
